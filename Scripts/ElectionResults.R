@@ -44,7 +44,7 @@ ggplot(r, aes(map_id = State)) +
     expand_limits(x = states$long, y = states$lat) +
     scale_fill_gradient2(low = muted("red"),  
                          mid = "lightgrey", high = muted("blue"),
-                         midpoint = 3, 
+                         midpoint = 3.5, 
                          limits = c(1, 6)) + 
     # coord_map("polyconic") +
     theme_map() +
@@ -66,7 +66,7 @@ assignorder <- function(d, p, col, statecol = "State", reverse = FALSE) {
 
 plotmap <- function(d, col, mid = 0, low = -6, high = 6) {
     ggplot(d, aes(map_id = State)) +
-        geom_map(aes_string(fill = col), map = states, alpha = 0.8) +
+        geom_map(aes_string(fill = col), map = states) +
         expand_limits(x = states$long, y = states$lat) +
         scale_fill_gradient2(low = muted("red"),  
                          mid = "lightgrey", high = muted("blue"),

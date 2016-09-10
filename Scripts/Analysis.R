@@ -22,9 +22,73 @@ d <- d %>% mutate(MedianIncome = as.numeric(gsub(",", "", MedianIncome)),
 diff = sum(abs(d$Diff))
 index = 1 - (diff/randomdiff)
 
-plotmap(d, "MedianIncome", mid = median(d$MedianIncome), 
+g1 <- ggplot(d, aes(map_id = State)) +
+    geom_map(aes(fill = MedianIncome), map = states) +
+    expand_limits(x = states$long, y = states$lat) +
+    # scale_fill_gradient2(low = muted("red"),  
+    #                      mid = "lightgrey", high = muted("blue"),
+    #                      midpoint = mid, 
+    #                      limits = c(low, high)) + 
+    scale_fill_viridis() +
+    theme_map() +
+    theme(plot.margin=margin(20, 20, 20, 20)) +
+    theme(legend.position=c(0.85, 0.2)) +
+    geom_text(aes(x=x, y=y, label=StateAbb, group=NULL), size=2)
+
+g1 <- plotmap(d, "MedianIncome", mid = median(d$MedianIncome), 
         low = min(d$MedianIncome), high = max(d$MedianIncome))
 plotmap(d, "Diff")
+
+x <- d %>% select(State, VoteNorm, MedianIncomeOrder, Diff) %>%
+    gather(Type, Norm, c(MedianIncomeOrder, VoteNorm)) %>%
+    mutate(BarValue = rep(1, nrow(.)))
+
+ggplot(x, aes(State, BarValue, fill = Norm)) + 
+    geom_bar(stat = "identity", alpha = 0.8) + 
+    coord_flip() +
+    scale_fill_gradient2(low = muted("red"),  
+                         mid = "lightgrey", high = muted("blue"),
+                         midpoint = 3.5, 
+                         limits = c(1, 6)) +
+    theme_minimal() +
+    theme(legend.position="none") + 
+    labs(x = "", y = "") +
+    theme(axis.text.x = element_blank())
+
+ggplot(d, aes(State, abs(Diff), fill = MedianIncomeOrder)) + 
+    geom_bar(stat = "identity", alpha = 0.8) + 
+    coord_flip() +
+    scale_fill_gradient2(low = muted("red"),  
+                         mid = "lightgrey", high = muted("blue"),
+                         midpoint = 3.5, 
+                         limits = c(1, 6)) +
+    theme_minimal() 
+
+ggplot(data.frame(Name = "Index", Value = index), aes(Name, Value)) + 
+    geom_bar(stat = "identity") +
+    expand_limits(y = c(0, 1)) +
+    geom_text(aes(label=round(Value * 100, 2), hjust=-1)) +
+    coord_flip() +
+    theme_classic() +
+    labs(x = "", y = "") +
+    theme(axis.text.y = element_blank(), axis.ticks = element_blank()) +
+    ggtitle("Divisive Index")
+#    theme(panel.grid.major = element_blank())
+
+g2 <- ggplot(x, aes(Type, State)) + 
+    geom_tile(aes(fill = Norm), alpha = 0.8) +
+    scale_fill_gradient2(low = muted("red"),  
+                         mid = "lightgrey", high = muted("blue"),
+                         midpoint = 3.5, 
+                         limits = c(1, 6)) +
+    theme_minimal() +
+#    theme(legend.position="none") + 
+    labs(x = "", y = "") +
+    theme(panel.grid.major = element_blank()) +
+    theme(axis.text.y = element_text(margin=margin(0,-10,0,0)))
+
+
+grid.arrange(g1 + theme(aspect.ratio = .67), g2, ncol=2, nrow=1, widths=c(4, 2), respect = FALSE)
 
 #Beer wine index
 library(xlsx)
