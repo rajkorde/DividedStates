@@ -7,6 +7,9 @@ library(maptools)
 library(ggthemes)
 library(mapdata)
 library(scales)
+library(viridis)
+library(gridExtra)
+library(forcats)
 
 
 #Median Income
@@ -25,13 +28,14 @@ index = 1 - (diff/randomdiff)
 g1 <- ggplot(d, aes(map_id = State)) +
     geom_map(aes(fill = MedianIncome), map = states) +
     expand_limits(x = states$long, y = states$lat) +
-    # scale_fill_gradient2(low = muted("red"),  
-    #                      mid = "lightgrey", high = muted("blue"),
-    #                      midpoint = mid, 
-    #                      limits = c(low, high)) + 
-    scale_fill_viridis() +
+     scale_fill_gradient2(low = muted("red"),  
+                          mid = "lightgrey", high = muted("blue"),
+                          midpoint = median(d$MedianIncome), 
+                          limits = c(min(d$MedianIncome), max(d$MedianIncome))) + 
+#    scale_fill_viridis() +
+    ggtitle("Median Income") +
     theme_map() +
-    theme(plot.margin=margin(20, 20, 20, 20)) +
+#    theme(plot.margin=margin(20, 20, 20, 20)) +
     theme(legend.position=c(0.85, 0.2)) +
     geom_text(aes(x=x, y=y, label=StateAbb, group=NULL), size=2)
 
@@ -41,7 +45,11 @@ plotmap(d, "Diff")
 
 x <- d %>% select(State, VoteNorm, MedianIncomeOrder, Diff) %>%
     gather(Type, Norm, c(MedianIncomeOrder, VoteNorm)) %>%
-    mutate(BarValue = rep(1, nrow(.)))
+    mutate(BarValue = rep(1, nrow(.)), 
+           State = fct_rev(factor(State)),
+           Type = fct_rev(factor(Type)))
+
+
 
 ggplot(x, aes(State, BarValue, fill = Norm)) + 
     geom_bar(stat = "identity", alpha = 0.8) + 
@@ -64,25 +72,32 @@ ggplot(d, aes(State, abs(Diff), fill = MedianIncomeOrder)) +
                          limits = c(1, 6)) +
     theme_minimal() 
 
-ggplot(data.frame(Name = "Index", Value = index), aes(Name, Value)) + 
+ggplot(data.frame(Name = "Index", Value = index), aes(Name, Value, fill = Name)) + 
     geom_bar(stat = "identity") +
-    expand_limits(y = c(0, 1)) +
-    geom_text(aes(label=round(Value * 100, 2), hjust=-1)) +
+    expand_limits(y = c(0, 1)) + scale_y_continuous(limits=c(0, 1)) +
+    geom_text(aes(label=round(Value * 100, 1), hjust=-0.5), size = 20) +
     coord_flip() +
     theme_classic() +
     labs(x = "", y = "") +
     theme(axis.text.y = element_blank(), axis.ticks = element_blank()) +
-    ggtitle("Divisive Index")
+    theme(legend.position="right", legend.text = element_blank(),
+          legend.key = element_blank()) +
+    scale_fill_discrete(name = "New Legend Title") 
+    
 #    theme(panel.grid.major = element_blank())
 
 g2 <- ggplot(x, aes(Type, State)) + 
-    geom_tile(aes(fill = Norm), alpha = 0.8) +
-    scale_fill_gradient2(low = muted("red"),  
-                         mid = "lightgrey", high = muted("blue"),
+    geom_tile(aes(fill = Norm), alpha = I(0.5)) +
+    scale_fill_gradient2(low = "red",  
+                         mid = "lightgrey", high = "blue",
                          midpoint = 3.5, 
-                         limits = c(1, 6)) +
+                         limits = c(1, 6),
+                         labels = c("voted republican\nlow income", 
+                                    "", "", "", "", 
+                                    "voted democrat\nhigh income")) +
     theme_minimal() +
-#    theme(legend.position="none") + 
+    ggtitle("Vote Differential") +
+    theme(legend.position="bottom", legend.title=element_blank()) + 
     labs(x = "", y = "") +
     theme(panel.grid.major = element_blank()) +
     theme(axis.text.y = element_text(margin=margin(0,-10,0,0)))

@@ -86,8 +86,8 @@ n <- 10000
 total <- 0
 set.seed(420)
 for(i in 1:n) {
-    r <- sample(results$VoteSix)
-    total <- total + (sum(abs(r - results$VoteSix)))
+    r1 <- sample(r$VoteNorm)
+    total <- total + (sum(abs(r1 - r$VoteNorm)))
 }
 randomdiff <- round(total/n)
 #113
