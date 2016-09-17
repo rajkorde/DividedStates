@@ -10,7 +10,9 @@ library(scales)
 library(viridis)
 library(gridExtra)
 library(forcats)
+library(xlsx)
 
+theme_set(theme_bw())
 
 #Median Income
 d <- read.csv(file = "Data/medianincome.csv")
@@ -25,85 +27,25 @@ d <- d %>% mutate(MedianIncome = as.numeric(gsub(",", "", MedianIncome)),
 diff = sum(abs(d$Diff))
 index = 1 - (diff/randomdiff)
 
-g1 <- ggplot(d, aes(map_id = State)) +
-    geom_map(aes(fill = MedianIncome), map = states) +
-    expand_limits(x = states$long, y = states$lat) +
-     scale_fill_gradient2(low = muted("red"),  
-                          mid = "lightgrey", high = muted("blue"),
-                          midpoint = median(d$MedianIncome), 
-                          limits = c(min(d$MedianIncome), max(d$MedianIncome))) + 
-#    scale_fill_viridis() +
-    ggtitle("Median Income") +
-    theme_map() +
-#    theme(plot.margin=margin(20, 20, 20, 20)) +
-    theme(legend.position=c(0.85, 0.2)) +
-    geom_text(aes(x=x, y=y, label=StateAbb, group=NULL), size=2)
-
-g1 <- plotmap(d, "MedianIncome", mid = median(d$MedianIncome), 
-        low = min(d$MedianIncome), high = max(d$MedianIncome))
-plotmap(d, "Diff")
+g1 <- plotUSmap(d, "Median Income", col = "MedianIncome", 
+                med = median(d$MedianIncome), 
+                low = min(d$MedianIncome), 
+                high = max(d$MedianIncome))
 
 x <- d %>% select(State, VoteNorm, MedianIncomeOrder, Diff) %>%
     gather(Type, Norm, c(MedianIncomeOrder, VoteNorm)) %>%
     mutate(BarValue = rep(1, nrow(.)), 
            State = fct_rev(factor(State)),
-           Type = fct_rev(factor(Type)))
+           Type = fct_rev(factor(Type, labels = c("Income", "VoteHistory"))))
 
+g2 <- plottable(x, "Type", "State", "Norm", labs = c("voted republican\nlow income", 
+                                               "", "", "", "", 
+                                               "voted democrat\nhigh income"))
+g3 <- plotmeter(index)
 
-
-ggplot(x, aes(State, BarValue, fill = Norm)) + 
-    geom_bar(stat = "identity", alpha = 0.8) + 
-    coord_flip() +
-    scale_fill_gradient2(low = muted("red"),  
-                         mid = "lightgrey", high = muted("blue"),
-                         midpoint = 3.5, 
-                         limits = c(1, 6)) +
-    theme_minimal() +
-    theme(legend.position="none") + 
-    labs(x = "", y = "") +
-    theme(axis.text.x = element_blank())
-
-ggplot(d, aes(State, abs(Diff), fill = MedianIncomeOrder)) + 
-    geom_bar(stat = "identity", alpha = 0.8) + 
-    coord_flip() +
-    scale_fill_gradient2(low = muted("red"),  
-                         mid = "lightgrey", high = muted("blue"),
-                         midpoint = 3.5, 
-                         limits = c(1, 6)) +
-    theme_minimal() 
-
-ggplot(data.frame(Name = "Index", Value = index), aes(Name, Value, fill = Name)) + 
-    geom_bar(stat = "identity") +
-    expand_limits(y = c(0, 1)) + scale_y_continuous(limits=c(0, 1)) +
-    geom_text(aes(label=round(Value * 100, 1), hjust=-0.5), size = 20) +
-    coord_flip() +
-    theme_classic() +
-    labs(x = "", y = "") +
-    theme(axis.text.y = element_blank(), axis.ticks = element_blank()) +
-    theme(legend.position="right", legend.text = element_blank(),
-          legend.key = element_blank()) +
-    scale_fill_discrete(name = "New Legend Title") 
-    
-#    theme(panel.grid.major = element_blank())
-
-g2 <- ggplot(x, aes(Type, State)) + 
-    geom_tile(aes(fill = Norm), alpha = I(0.5)) +
-    scale_fill_gradient2(low = "red",  
-                         mid = "lightgrey", high = "blue",
-                         midpoint = 3.5, 
-                         limits = c(1, 6),
-                         labels = c("voted republican\nlow income", 
-                                    "", "", "", "", 
-                                    "voted democrat\nhigh income")) +
-    theme_minimal() +
-    ggtitle("Vote Differential") +
-    theme(legend.position="bottom", legend.title=element_blank()) + 
-    labs(x = "", y = "") +
-    theme(panel.grid.major = element_blank()) +
-    theme(axis.text.y = element_text(margin=margin(0,-10,0,0)))
-
-
-grid.arrange(g1 + theme(aspect.ratio = .67), g2, ncol=2, nrow=1, widths=c(4, 2), respect = FALSE)
+g <- plotall(g1, g2, g3)
+ggsave(filename = "Plots/MedianIncome.png", plot = g, 
+       width = 4, height = 3, scale = 2.5)
 
 #Beer wine index
 library(xlsx)
@@ -122,9 +64,26 @@ d <- d %>% select(State = STATE, BWIndex) %>%
 diff = sum(abs(d$Diff))
 index = 1 - (diff/randomdiff)
 
-plotmap(d, "BWIndex", mid = median(d$BWIndex), 
-        low = min(d$BWIndex), high = max(d$BWIndex))
-plotmap(d, "Diff")
+g1 <- plotUSmap(d, "Beer Wine Preference", col = "BWIndex", 
+                med = median(d$BWIndex), 
+                low = min(d$BWIndex), 
+                high = max(d$BWIndex))
+
+x <- d %>% select(State, VoteNorm, BWIndexOrder, Diff) %>%
+    gather(Type, Norm, c(BWIndexOrder, VoteNorm)) %>%
+    mutate(BarValue = rep(1, nrow(.)), 
+           State = fct_rev(factor(State)),
+           Type = fct_rev(factor(Type, 
+                                 labels = c("BeerWineIndex", "VoteHistory"))))
+
+g2 <- plottable(x, "Type", "State", "Norm", labs = c("voted republican\nlikes beer", 
+                                                     "", "", "", "", 
+                                                     "voted democrat\nlikes wine"))
+g3 <- plotmeter(index)
+
+g <- plotall(g1, g2, g3)
+ggsave(filename = "Plots/BWPref.png", plot = g, 
+       width = 4, height = 3, scale = 2.5)
 
 #obestiy
 d <- read_csv("Data/obesity.csv")
@@ -141,9 +100,27 @@ d <- select(d, State = `State value`, Obesity = `Adultobesity number`) %>%
 diff = sum(abs(d$Diff))
 index = 1 - (diff/randomdiff)
 
-plotmap(d, "BWIndex", mid = median(d$BWIndex), 
-        low = min(d$BWIndex), high = max(d$BWIndex))
-plotmap(d, "Diff")
+g1 <- plotUSmap(d, "Obesity per capita", col = "Obesity", 
+                med = median(d$Obesity), 
+                low = min(d$Obesity), 
+                high = max(d$Obesity),
+                reverse = TRUE)
+
+x <- d %>% select(State, VoteNorm, ObesityOrder, Diff) %>%
+    gather(Type, Norm, c(ObesityOrder, VoteNorm)) %>%
+    mutate(BarValue = rep(1, nrow(.)), 
+           State = fct_rev(factor(State)),
+           Type = fct_rev(factor(Type, 
+                                 labels = c("Obesity", "VoteHistory"))))
+
+g2 <- plottable(x, "Type", "State", "Norm", labs = c("voted republican\nmore obese", 
+                                                     "", "", "", "", 
+                                                     "voted democrat\nless obese"))
+g3 <- plotmeter(index)
+
+g <- plotall(g1, g2, g3)
+ggsave(filename = "Plots/Obesity.png", plot = g, 
+       width = 4, height = 3, scale = 2.5)
 
 #abortion data
 
@@ -160,12 +137,29 @@ d <- select(d, State = Link, Rate) %>%
 diff = sum(abs(d$Diff))
 index = 1 - (diff/randomdiff)
 
-plotmap(d, "Rate", mid = median(d$Rate), 
-        low = min(d$Rate), high = max(d$Rate))
-plotmap(d, "Diff")
+g1 <- plotUSmap(d, "Abortion Rate", col = "Rate", 
+                med = median(d$Rate), 
+                low = min(d$Rate), 
+                high = max(d$Rate))
+
+x <- d %>% select(State, VoteNorm, RateOrder, Diff) %>%
+    gather(Type, Norm, c(RateOrder, VoteNorm)) %>%
+    mutate(BarValue = rep(1, nrow(.)), 
+           State = fct_rev(factor(State)),
+           Type = fct_rev(factor(Type, 
+                                 labels = c("AbortionRate", "VoteHistory"))))
+
+g2 <- plottable(x, "Type", "State", "Norm", labs = c("voted republican\nless rate", 
+                                                     "", "", "", "", 
+                                                     "voted democrat\nhigh rate"))
+g3 <- plotmeter(index)
+
+g <- plotall(g1, g2, g3)
+ggsave(filename = "Plots/AbortionRate.png", plot = g, 
+       width = 4, height = 3, scale = 2.5)
 
 
-#clinics
+#abortion clinics
 d <- read_csv("Data/abortion.csv")
 d <- select(d, State = Link, Clinics) %>%
     mutate(State = tolower(State)) %>%
@@ -181,6 +175,61 @@ d <- select(d, State = Link, Clinics) %>%
 diff = sum(abs(d$Diff))
 index = 1 - (diff/randomdiff)
 
-plotmap(d, "ClinicRate", mid = median(d$ClinicRate), 
-        low = min(d$ClinicRate), high = max(d$ClinicRate))
-plotmap(d, "Diff")
+g1 <- plotUSmap(d, "Abortion Clinics per 1000 people", col = "ClinicRate", 
+                med = median(d$ClinicRate), 
+                low = min(d$ClinicRate), 
+                high = max(d$ClinicRate))
+
+x <- d %>% select(State, VoteNorm, ClinicRateOrder, Diff) %>%
+    gather(Type, Norm, c(ClinicRateOrder, VoteNorm)) %>%
+    mutate(BarValue = rep(1, nrow(.)), 
+           State = fct_rev(factor(State)),
+           Type = fct_rev(factor(Type, 
+                                 labels = c("Clinics", "VoteHistory"))))
+
+g2 <- plottable(x, "Type", "State", "Norm", 
+                labs = c("voted republican\nless clinics", "", "", "", "", 
+                         "voted democrat\nmore clinics"))
+g3 <- plotmeter(index)
+
+g <- plotall(g1, g2, g3)
+ggsave(filename = "Plots/AbortionClinics.png", plot = g, 
+       width = 4, height = 3, scale = 2.5)
+
+#hate groups
+
+d <- read_csv("Data/Hategroups.csv")
+d <- mutate(d, State = tolower(State)) %>%
+    arrange(State) %>%
+    inner_join(r, by = "State") %>%
+    mutate(HateGroupRate = (HateGroups*1000)/Population) %>%
+    do(assignorder(d = data.frame(.), p = r$VoteNorm, 
+                   col = "HateGroupRate", reverse = TRUE)) %>%
+    mutate(Diff = HateGroupRateOrder - r$VoteNorm)
+
+
+diff = sum(abs(d$Diff))
+index = 1 - (diff/randomdiff)
+
+g1 <- plotUSmap(d, "Hate groups per 1000 people", col = "HateGroupRate", 
+                med = median(d$HateGroupRate), 
+                low = min(d$HateGroupRate), 
+                high = max(d$HateGroupRate), 
+                reverse = TRUE)
+
+x <- d %>% select(State, VoteNorm, HateGroupRateOrder, Diff) %>%
+    gather(Type, Norm, c(HateGroupRateOrder, VoteNorm)) %>%
+    mutate(BarValue = rep(1, nrow(.)), 
+           State = fct_rev(factor(State)),
+           Type = fct_rev(factor(Type, 
+                                 labels = c("HateGroups", "VoteHistory"))))
+
+g2 <- plottable(x, "Type", "State", "Norm", 
+                labs = c("voted republican\nmore hate groups", "", "", "", "", 
+                         "voted democrat\nless hate groups"))
+g3 <- plotmeter(index)
+
+g <- plotall(g1, g2, g3)
+ggsave(filename = "Plots/Hategroups.png", plot = g, 
+       width = 4, height = 3, scale = 2.5)
+
